@@ -1,8 +1,11 @@
-use std::net::TcpStream;
 use std::fs;
 use std::io::Read;
+use std::net::TcpStream;
+
 use nalgebra::DMatrix;
 use toml::Value;
+
+const SING_MSG_SIZE: usize = 1440;
 
 #[derive(Debug)]
 pub struct Config {
@@ -47,16 +50,20 @@ impl Config {
 
 pub fn read_data(client: &mut TcpStream, config: &Config) -> DMatrix<f32> {
     let buf_size: usize = (config.channel as f64 * config.sample_rate as f64 * config.time_buffer * 4 as f64) as usize;
-    let mut bytes_vec = Vec::new();
-    bytes_vec.resize(buf_size, 0u8);
-    client.read(&mut bytes_vec).unwrap();
+    let acq_time = buf_size / SING_MSG_SIZE;
+    let mut total_vec = Vec::<u8>::new();
+    let mut bytes_vec = [0u8; SING_MSG_SIZE];
+    for _ in 0..acq_time {
+        client.read(&mut bytes_vec).unwrap();
+        total_vec.append(&mut bytes_vec.to_vec());
+    }
     let eeg_size = buf_size / 4;
     let mut data_vec = Vec::new();
     data_vec.resize(eeg_size, 0f32);
     for ind in 0..data_vec.len() {
-        data_vec[ind] = f32::from_le_bytes(bytes_vec[ind * 4..ind * 4 + 4].try_into().unwrap());
+        data_vec[ind] = f32::from_le_bytes(total_vec[ind * 4..ind * 4 + 4].try_into().unwrap());
     }
-    DMatrix::<f32>::from_vec(eeg_size / config.channel, config.channel, data_vec).transpose()
+    DMatrix::<f32>::from_vec(config.channel, eeg_size / config.channel, data_vec)
 }
 
 pub fn down_sample(eeg_data: DMatrix<f32>, config: &Config) -> DMatrix<f32> {
