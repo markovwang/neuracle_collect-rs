@@ -21,16 +21,18 @@ pub struct Config {
 
 #[derive(Debug)]
 pub enum Strategy {
-    COL,
-    // 按照列发送
-    PACK,   // 按照包发送
+    COL,  // 按照列发送
+    PACK, // 按照包发送
 }
 
 impl Config {
     pub fn from_file(file_path: &str) -> Self {
         let config = fs::read_to_string(file_path).expect("cannot read file");
         let config = config.parse::<Value>().unwrap();
-        let str = config["forwarding"]["strategy"].as_str().unwrap().to_string();
+        let str = config["forwarding"]["strategy"]
+            .as_str()
+            .unwrap()
+            .to_string();
         Self {
             neuracle_addr: String::from(config["collection"]["neuracle_addr"].as_str().unwrap()),
             channel: config["collection"]["channel_size"].as_integer().unwrap() as usize,
@@ -41,7 +43,7 @@ impl Config {
             strategy: match str.as_str() {
                 "col" => Strategy::COL,
                 "pack" => Strategy::PACK,
-                _ => panic!("config wrong, should be col or pack")
+                _ => panic!("config wrong, should be col or pack"),
             },
             topic: String::from(config["forwarding"]["topic"].as_str().unwrap()),
         }
@@ -49,7 +51,9 @@ impl Config {
 }
 
 pub fn read_data(client: &mut TcpStream, config: &Config) -> DMatrix<f32> {
-    let buf_size: usize = (config.channel as f64 * config.sample_rate as f64 * config.time_buffer * 4 as f64) as usize;
+    let buf_size: usize =
+        (config.channel as f64 * config.sample_rate as f64 * config.time_buffer * 4 as f64)
+            as usize;
     let acq_time = buf_size / SING_MSG_SIZE;
     let mut total_vec = Vec::<u8>::new();
     let mut bytes_vec = [0u8; SING_MSG_SIZE];
@@ -77,13 +81,13 @@ pub fn down_sample(eeg_data: DMatrix<f32>, config: &Config) -> DMatrix<f32> {
     }
     let mut ret_mat = DMatrix::from_vec(origin_size.0, origin_size.1 / downsample_rate, ret_vec);
     return match trigger_num {
-        0 => {
-            ret_mat
-        }
+        0 => ret_mat,
         _ => {
-            let trigger_ind = trigger.iter()
+            let trigger_ind = trigger
+                .iter()
                 .enumerate()
-                .filter_map(|(index, &value)| (value > 0f32).then(|| index)).collect::<Vec<_>>();
+                .filter_map(|(index, &value)| (value > 0f32).then(|| index))
+                .collect::<Vec<_>>();
             for ind in trigger_ind {
                 ret_mat[(origin_size.0 - 1, ind / downsample_rate)] = trigger[ind];
             }
