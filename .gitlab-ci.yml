@@ -1,0 +1,11 @@
+before_script:
+  - apt-get install rustc cargo -y
+
+run-test:
+  script:
+  - cargo --version
+  - rustc --version
+
+run-build:
+  script:
+  - cargo build --release
