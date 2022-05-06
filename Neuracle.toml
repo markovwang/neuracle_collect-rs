@@ -2,10 +2,10 @@
 neuracle_addr = "127.0.0.1:8712"    # ip::port
 channel_size = 9                    # 导联数(包含Trigger导)
 sample_rate = 1000                  # 设备采样率
-time_buffer = 0.12                  # 数据包累计量
+time_buffer = 0.12                  # 单次接收的数据长度
 
 [forwarding]
-bootstrap_server = "server:60000"   # kafka地址请去问李哥捏 :)
+bootstrap_server = "server:60000"   # kafka地址请去问管理员
 topic = "markov_test"               # 接收端的topic
 strategy = "col"                    # col: 按列转发, pack: 按包转发
 
