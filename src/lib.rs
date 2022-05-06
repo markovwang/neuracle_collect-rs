@@ -5,8 +5,6 @@ use std::net::TcpStream;
 use nalgebra::DMatrix;
 use toml::Value;
 
-const SING_MSG_SIZE: usize = 1440;
-
 #[derive(Debug)]
 pub struct Config {
     pub neuracle_addr: String,
@@ -21,14 +19,16 @@ pub struct Config {
 
 #[derive(Debug)]
 pub enum Strategy {
-    COL,  // 按照列发送
-    PACK, // 按照包发送
+    COL,
+    // 按照列发送
+    PACK,
+    // 按照包发送
 }
 
 impl Config {
     pub fn from_file(file_path: &str) -> Self {
         let config = fs::read_to_string(file_path).expect("cannot read file");
-        let config = config.parse::<Value>().unwrap();
+        let config = config.parse::<Value>().expect("toml config parse error!");
         let str = config["forwarding"]["strategy"]
             .as_str()
             .unwrap()
@@ -54,18 +54,17 @@ pub fn read_data(client: &mut TcpStream, config: &Config) -> DMatrix<f32> {
     let buf_size: usize =
         (config.channel as f64 * config.sample_rate as f64 * config.time_buffer * 4 as f64)
             as usize;
-    let acq_time = buf_size / SING_MSG_SIZE;
     let mut total_vec = Vec::<u8>::new();
-    let mut bytes_vec = [0u8; SING_MSG_SIZE];
-    for _ in 0..acq_time {
-        client.read(&mut bytes_vec).unwrap();
-        total_vec.append(&mut bytes_vec.to_vec());
-    }
+    total_vec.resize(buf_size, 0u8);
+    client.read(&mut total_vec).unwrap();
+    total_vec.shrink_to_fit();
     let eeg_size = buf_size / 4;
     let mut data_vec = Vec::new();
     data_vec.resize(eeg_size, 0f32);
     for ind in 0..data_vec.len() {
-        data_vec[ind] = f32::from_le_bytes(total_vec[ind * 4..ind * 4 + 4].try_into().unwrap());
+        data_vec[ind] = f32::from_le_bytes(total_vec[ind * 4..ind * 4 + 4]
+            .try_into()
+            .expect("Size maybe wrong, please check neusen and config file!!!"));
     }
     DMatrix::<f32>::from_vec(config.channel, eeg_size / config.channel, data_vec)
 }
@@ -94,4 +93,15 @@ pub fn down_sample(eeg_data: DMatrix<f32>, config: &Config) -> DMatrix<f32> {
             ret_mat
         }
     };
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_config() {
+        let config = Config::from_file("Neuracle.toml");
+        println!("{:?}", config)
+    }
 }

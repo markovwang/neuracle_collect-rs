@@ -1,6 +1,6 @@
 [collection]
 neuracle_addr = "127.0.0.1:8712"    # ip::port
-channel_size = 9                    # 导联数(包含Trigger导)
+channel_size = 65                    # 导联数(包含Trigger导)
 sample_rate = 1000                  # 设备采样率
 time_buffer = 0.12                  # 单次接收的数据长度
 

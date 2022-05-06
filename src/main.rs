@@ -1,9 +1,11 @@
-use kafka::producer;
-use kafka::producer::Record;
-use neuracle_collect::{down_sample, read_data, Config, Strategy};
 use std::net::TcpStream;
 use std::sync::mpsc::channel;
 use std::thread;
+
+use kafka::producer;
+use kafka::producer::Record;
+
+use neuracle_collect::{Config, down_sample, read_data, Strategy};
 
 fn main() {
     let config = Config::from_file("Neuracle.toml");
@@ -17,7 +19,9 @@ fn main() {
         println!("start to fetch data");
         loop {
             let eeg_pack = read_data(&mut client, &config);
+            println!("{}", &eeg_pack);
             let eeg_pack = down_sample(eeg_pack, &config);
+            println!("{}", &eeg_pack);
             match config.strategy {
                 Strategy::COL => {
                     for col in eeg_pack.column_iter() {
@@ -41,7 +45,7 @@ fn main() {
                 key: (),
                 value: data_bytes,
             })
-            .unwrap();
+            .expect("produce failure, please check if your topic exists in broker");
     });
     receive_thread.join().unwrap();
     forward_thread.join().unwrap();
